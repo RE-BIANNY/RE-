@@ -9,7 +9,7 @@ jobs:
     env:
       PACK_NAME: "zhaiDriftBottle"
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3
       - name: Pack
         run: |
