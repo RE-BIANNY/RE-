@@ -7,7 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PACK_NAME: "zhaiDriftBottle.zip"
+      PACK_NAME: "zhaiDriftBottle"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
