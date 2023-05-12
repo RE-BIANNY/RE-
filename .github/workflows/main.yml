@@ -5,9 +5,9 @@ on:
     branches: [ main ]
 jobs:
   build:
-    runs-on: "C:\Users\86131\Desktop\zhaiDriftBottle"
+    runs-on: ubuntu-latest
     env:
-      PACK_NAME: "zhaiDriftBottle"
+      PACK_NAME: "zhaiDriftBottle.zip"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
