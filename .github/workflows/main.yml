@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: "C:\Users\86131\Desktop\zhaiDriftBottle"
     env:
       PACK_NAME: "zhaiDriftBottle"
     steps:
