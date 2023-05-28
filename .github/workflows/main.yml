@@ -1,3 +1,286 @@
+from . import main
+{
+    "name" : "宅爷_漂流瓶",
+    "author" : "宅爷",
+    "namespace" : "zhaiDriftBottle",
+    "info" : "扔漂流瓶，捡漂流瓶，漂流瓶",
+    "priority" : 30000,
+    "svn" : 1,
+    "version" : "1.0.0",
+    "compatible_svn" : 100,
+    "message_mode" : "olivos_string",
+    "support" : [
+        {
+            "sdk" : "onebot",
+            "platform" : "qq",
+            "model" : "all"
+        },
+        {
+            "sdk" : "all",
+            "platform" : "all",
+            "model" : "all"
+        }
+    ]
+import OlivOS
+import re
+import json
+import os
+import random
+
+class Event(object):
+    def init(plugin_event, Proc):
+        # 创建文件夹
+        if not os.path.exists("plugin/data"):
+            os.mkdir("plugin/data")
+        if not os.path.exists("plugin/data/zhaiDriftBottle"):
+            os.mkdir("plugin/data/zhaiDriftBottle")
+        if not os.path.exists("plugin/data/zhaiDriftBottle"):
+            os.mkdir("plugin/data/zhaiDriftBottle")
+        # 设置文件
+        if not os.access("plugin/data/zhaiDriftBottle/data.json", os.R_OK):
+            data = {"data":[]}
+            with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def group_message(plugin_event, Proc):
+        unity_reply(plugin_event, Proc)
+
+def unity_reply(plugin_event, Proc):
+    if plugin_event.data.message == "漂流瓶":
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        t = "蔚蓝的大海中" + str(len(data["data"])) + "个漂流瓶在海中起起伏伏"
+        t += "\n> 捡漂流瓶 > 扔漂流瓶"
+        botHash = plugin_event.bot_info.hash
+        if isMaster(botHash, plugin_event.data.user_id):
+            t += "\n——骰主指令——"
+            t += "\n> 漂流瓶瓶子 > 漂流瓶瓶子加> 漂流瓶瓶子减"
+            t += "\n> 漂流瓶杂物 > 漂流瓶杂物加> 漂流瓶杂物减"
+        plugin_event.reply(t)
+        return
+
+
+    if plugin_event.data.message == "捡漂流瓶":
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # 杂物
+        if "item" in data:
+            i = random.randint(1,100)
+            if i <= 10:
+                i = random.randint(0,len(data["item"])-1)
+                text = data["item"][i]
+                plugin_event.reply("你没有捡到漂流瓶，反而捡到了"+text)
+                return
+        if len(data["data"]) == 0:
+            plugin_event.reply("海滩干干净净的，不如自己扔一个吧\n> 扔漂流瓶")
+            return
+        if "bottle" in data:
+            bottle = data["bottle"]
+        else:
+            bottle = ["漂流瓶"]
+        t = "你在海边捡到了一个" + bottle[random.randint(0,len(bottle)-1)] + "，瓶中的纸条上写着：\n"
+        i = random.randint(0,len(data["data"])-1)
+        text = data["data"][i]
+        text = text.replace("【换行】","\n")
+        t += text
+        with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        plugin_event.reply(t)
+        return
+
+
+    pattern = "扔漂流瓶[ ]*(.*)"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        text = plugin_event.data.message.replace("\r\n","【换行】")
+        text = text.replace("\n","【换行】")
+        if text == "":
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        match = re.match(pattern, text)
+        t = match.group(1)
+        t +="\nBY：" + plugin_event.data.sender["nickname"] + " (" + str(plugin_event.data.user_id) + ")"
+        t += "\nFrom：" + plugin_event.get_group_info(plugin_event.data.group_id)["data"]["name"] + " ("+str(plugin_event.data.group_id) + ")"
+        t = t.replace("【换行】","\n")
+        # 判断是否重复
+        for i in range(len(data["data"])):
+            if data["data"][i] == t:
+                plugin_event.reply("你还有一个相同的漂流瓶在海中漂浮，写一点别的吧")
+                return
+        data["data"].append(t)
+        with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        plugin_event.reply("你将一个写着【"+match.group(1).replace("【换行】","\n")+"】的纸条塞入瓶中扔进大海，希望有人捡到吧~")
+        return
+
+    if plugin_event.data.message == "扔回去":
+        plugin_event.reply("回复你要扔回的漂流瓶+扔回去就可以扔回啦\n遇到恶意漂流瓶可以使用 [.send] 向骰主反馈")
+        return
+
+    pattern = "\[OP:reply,id=([0-9\-]+)\].*扔回去$"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        t = plugin_event.get_msg(match.group(1))["data"]
+        if str(t["sender"]["user_id"]) != str(plugin_event.bot_info.id):
+            plugin_event.reply("这不是海里的漂流瓶")
+            return
+        t = t["message"]
+        t = t.replace("\r\n","【换行】")
+        t = t.replace("\n","【换行】")
+        p = "你在海边捡到了一个.*，瓶中的纸条上写着：【换行】(.*)"
+        m = re.match(p,t)
+        if not m:
+            plugin_event.reply("你要扔回去的真的是漂流瓶吗？")
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        t = m.group(1).replace("【换行】","\n")
+        # 判断是否重复
+        for i in range(len(data["data"])):
+            if data["data"][i] == t:
+                plugin_event.reply("还有一个相同的漂流瓶在海中漂浮，还是不要扔回去了")
+                return
+        data["data"].append(t)
+        with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        plugin_event.reply("瓶子重新被你扔回了大海\n遇到恶意漂流瓶可以使用 [.send] 向骰主反馈")
+        return
+
+
+
+    if plugin_event.data.message == "漂流瓶瓶子":
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "bottle" in data:
+            plugin_event.reply("没有设置瓶子类型")
+            return
+        t = "漂流瓶类型有："
+        for i in range(len(data["bottle"])):
+            t += "\n" + data["bottle"][i]
+        plugin_event.reply(t)
+        return
+
+
+    pattern = "漂流瓶瓶子加[ ]*(.+)"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "bottle" in data:
+            data["bottle"] = []
+        data["bottle"].append(match.group(1))
+        with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        plugin_event.reply("瓶子已增加【"+match.group(1)+"】")
+        return
+
+
+    pattern = "漂流瓶瓶子减[ ]*(.+)"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "bottle" in data:
+            plugin_event.reply("没有设置瓶子类型")
+            return
+        for i in range(len(data["bottle"])):
+            if match.group(1) == data["bottle"][i]:
+                del data["bottle"][i]
+                with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+                plugin_event.reply("瓶子类型已删除【"+match.group(1)+"】")
+                return
+        plugin_event.reply("没有这个瓶子")
+        return
+
+
+
+    if plugin_event.data.message == "漂流瓶杂物":
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "item" in data:
+            plugin_event.reply("没有设置杂物")
+            return
+        t = "漂流瓶杂物有："
+        for i in range(len(data["item"])):
+            t += "\n" + data["item"][i]
+        plugin_event.reply(t)
+        return
+
+
+    pattern = "漂流瓶杂物加[ ]*(.+)"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "item" in data:
+            data["item"] = []
+        data["item"].append(match.group(1))
+        with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        plugin_event.reply("杂物已增加【"+match.group(1)+"】")
+        return
+
+
+    pattern = "漂流瓶杂物减[ ]*(.+)"
+    match = re.match(pattern, plugin_event.data.message)
+    if match:
+        botHash = plugin_event.bot_info.hash
+        if not isMaster(botHash, plugin_event.data.user_id):
+            return
+        with open("plugin/data/zhaiDriftBottle/data.json", 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not "item" in data:
+            plugin_event.reply("没有设置杂物")
+            return
+        for i in range(len(data["item"])):
+            if match.group(1) == data["item"][i]:
+                del data["item"][i]
+                with open("plugin/data/zhaiDriftBottle/data.json", 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+                plugin_event.reply("杂物已删除【"+match.group(1)+"】")
+                return
+        plugin_event.reply("没有这个杂物")
+        return
+
+
+
+
+
+def isMaster(botHash, user_id):
+    # 判断是否是骰主
+    masterList = getMasterList(botHash)
+    for i in range(len(masterList)):
+        if str(user_id) == masterList[i][0]:
+            return True
+    return False
+
+def getMasterList(botHash):
+    # 取骰主列表
+    try:
+        with open('plugin/data/OlivaDice/'+botHash+'/console/switch.json', 'r', encoding='utf-8') as f:
+            switch = json.load(f)
+            masterQQ = switch["masterList"]
+            return masterQQ
+    except:
+        Proc.log(2,"未找到MasterQQ")
+        return []
 name: CI
 on:
   workflow_dispatch:
